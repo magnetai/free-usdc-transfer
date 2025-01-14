@@ -1,5 +1,5 @@
 {
-  "name": "free-usdc-transfer",
+  "name": "@magnetai/free-usdc-transfer",
   "version": "0.1.0",
   "description": "",
   "main": "index.js",
@@ -26,7 +26,7 @@
   },
   "type": "module",
   "bin": {
-    "free-usdc-transfer": "./build/index.js"
+    "free-usdc-transfer": "/build/index.js"
   },
   "files": [
     "build"

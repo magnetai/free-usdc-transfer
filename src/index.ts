@@ -6,13 +6,25 @@ import {
 } from "@modelcontextprotocol/sdk/types.js";
 import { z } from "zod";
 import * as fs from 'fs/promises';
+import { http } from 'viem'
+import { mainnet } from 'viem/chains'
+import { createEnsPublicClient } from '@ensdomains/ensjs'
+import { Coinbase, Wallet } from "@coinbase/coinbase-sdk";
+import { ethers } from "ethers";
 
 // Check for API key
-const COINBASE_CDP_API_KEY = process.env.COINBASE_CDP_API_KEY!;
-if (!COINBASE_CDP_API_KEY) {
-  console.error("Error: COINBASE_CDP_API_KEY environment variable is required");
-  process.exit(1);
+const COINBASE_CDP_API_KEY_NAME = process.env.COINBASE_CDP_API_KEY_NAME!;
+if (!COINBASE_CDP_API_KEY_NAME) {
+    console.error("Error: COINBASE_CDP_API_KEY_NAME environment variable is required");
+    process.exit(1);
 }
+const COINBASE_CDP_PRIVATE_KEY = process.env.COINBASE_CDP_PRIVATE_KEY!;
+if (!COINBASE_CDP_PRIVATE_KEY) {
+    console.error("Error: COINBASE_CDP_SECRET environment variable is required");
+    process.exit(1);
+}
+Coinbase.configure({ apiKeyName: COINBASE_CDP_API_KEY_NAME, privateKey: COINBASE_CDP_PRIVATE_KEY });
+
 
 // Create server instance
 const server = new Server(
@@ -30,9 +42,8 @@ const server = new Server(
 // Define Zod schemas for validation
 const BstsArgumentsSchema = z.object({
     usdc_amount: z.number(),
-    recipient: z.string().length(42)
+    recipient: z.string()
 });
-
 
 // List available tools
 server.setRequestHandler(ListToolsRequestSchema, async () => {
@@ -50,7 +61,7 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
                         },
                         recipient: {
                             type: "string",
-                            description: "Recipient's on-chain address",
+                            description: "Recipient's on-chain address or ENS addresses ending in .eth",
                         }
                     },
                     required: ["usdc_amount", "recipient"],
@@ -67,18 +78,59 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
     };
 });
 
-async function createMpcWallet() {
-    await fs.writeFile("mpc_info.json", "0x38918BF3174A1fD7d8264764B79AD5F389C318c3", 'utf8');
-    return "0x38918BF3174A1fD7d8264764B79AD5F389C318c3"
+// Create the client
+const client = createEnsPublicClient({
+    chain: mainnet,
+    transport: http(),
+})
+
+// ENS
+async function getAddress(recipient: string) {
+    if (recipient.toLowerCase().endsWith('.eth')) {
+        return (await client.getAddressRecord({ name: recipient }))?.value
+    }
+    if (!recipient || recipient.length != 42) {
+        return undefined
+    }
+    return recipient;
+};
+
+async function createMPCWallet() {
+    let wallet = await Wallet.create({ networkId: "base-mainnet" });
+    const seedFilePath = "mpc_info.json";
+    wallet.saveSeedToFile(seedFilePath);
+    return await wallet.getDefaultAddress();
+}
+
+async function sendUSDCUseMPCWallet(walletId: string, targetAddress: string, sendValue: number) {
+    let wallet = await Wallet.fetch(walletId)
+    await wallet.loadSeedFromFile('mpc_info.json')
+    let defaultAddress = await wallet.getDefaultAddress()
+
+    const transfer = await defaultAddress.createTransfer({
+        amount: sendValue,
+        assetId: Coinbase.assets.Usdc,
+        destination: ethers.getAddress(targetAddress),
+        gasless: true
+    });
+    return (await transfer.wait()).getTransactionHash()
 }
 
 async function queryMpcWallet() {
     try {
-        const data = await fs.readFile("mpc_info.json", 'utf8');
-        return {mpc_address: data, mpc_key: null};
+        const jsonString = await fs.readFile("mpc_info.json", 'utf8')
+        console.log(jsonString)
+        const ids = Object.keys(JSON.parse(jsonString))
+        //if (!ids || ids.length === 0) {
+        //    return { mpcAddress: null, mpcId: null }
+        //}
+        //console.log(ids[0])
+        //const wallet = await Wallet.fetch(ids[0])
+        //await wallet.loadSeedFromFile('mpc_info.json')
+        return { mpcAddress: ids[0], mpcId: null }
     } catch (err) {
-        console.error(`${err}`);
-        return {mpc_address: null, mpc_key: null};;
+        console.error(`${err}`)
+        return { mpcAddress: null, mpcId: null }
     }
 }
 
@@ -88,8 +140,8 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
     try {
         if (name === "buy_something_to_somebody") {
             const { usdc_amount, recipient } = BstsArgumentsSchema.parse(args);
-            const { mpc_address } = await queryMpcWallet();
-            if (!mpc_address) {
+            const { mpcAddress } = await queryMpcWallet();
+            if (!mpcAddress) {
                 return {
                     content: [
                         {
@@ -99,23 +151,34 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
                     ],
                 };
             }
-            return {
-                content: [
-                    {
-                        type: "text",
-                        text: `Transferred ${usdc_amount} USDC to ${recipient} with zero fees`,
-                    },
-                ],
-            };
-        } else if (name === "create_mpc_wallet") {
-            const { mpc_address } = await queryMpcWallet();
-            if (!mpc_address) {
-                const new_mpc_address = await createMpcWallet()
+            const recipientAddr = await getAddress(recipient)
+            if (!recipientAddr) {
                 return {
                     content: [
                         {
                             type: "text",
-                            text: `Your Coinbase MPC wallet address has been successfully created (${new_mpc_address}). Now please transfer USDC to MPC wallet, and you can later use it to transfer funds to others without fees.`,
+                            text: 'Invalid address or ENS',
+                        },
+                    ]
+                }
+            }
+            return {
+                content: [
+                    {
+                        type: "text",
+                        text: `Transferred ${usdc_amount} USDC to ${recipientAddr} with zero fees`,
+                    },
+                ],
+            };
+        } else if (name === "create_mpc_wallet") {
+            const { mpcAddress } = await queryMpcWallet();
+            if (!mpcAddress) {
+                const newMpcAddress = await createMPCWallet()
+                return {
+                    content: [
+                        {
+                            type: "text",
+                            text: `Your Coinbase MPC wallet address has been successfully created (${newMpcAddress}). Now please transfer USDC to MPC wallet, and you can later use it to transfer funds to others without fees.`,
                         },
                     ],
                 };
@@ -124,7 +187,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
                 content: [
                     {
                         type: "text",
-                        text: `You already have an address, which is ${mpc_address}`,
+                        text: `You already have an address, which is ${mpcAddress}`,
                     },
                 ],
             };

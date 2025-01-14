@@ -1,0 +1,32 @@
+{
+  "name": "free-usdc-transfer",
+  "version": "0.1.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "build": "tsc && node -e \"require('fs').chmodSync('build/index.js', '755')\"",
+    "test": "node build/test.js"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@coinbase/coinbase-sdk": "^0.13.0",
+    "@ensdomains/ensjs": "^4.0.2",
+    "@modelcontextprotocol/sdk": "^1.1.0",
+    "ethers": "^6.13.5",
+    "zod": "^3.24.1"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.5",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.7.3"
+  },
+  "type": "module",
+  "bin": {
+    "free-usdc-transfer": "./build/index.js"
+  },
+  "files": [
+    "build"
+  ]
+}

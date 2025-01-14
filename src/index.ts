@@ -12,8 +12,14 @@ import { createEnsPublicClient } from '@ensdomains/ensjs'
 import { Coinbase, Wallet } from "@coinbase/coinbase-sdk";
 import { ethers } from "ethers";
 
+// import { bootstrap } from 'global-agent';
+// process.env.GLOBAL_AGENT_HTTP_PROXY = 'http://127.0.0.1:10080';
+// process.env.GLOBAL_AGENT_HTTPS_PROXY = 'http://127.0.0.1:10080';
+// process.env.GLOBAL_AGENT_NO_PROXY = 'localhost,127.0.0.1';
+// bootstrap();
+
 // Base scan
-const BASE_SCAN_TX = "https://basescan.org/tx/"
+const BASE_SCAN_ADDR = "https://basescan.org/address/"
 
 // Check for API key
 const COINBASE_CDP_API_KEY_NAME = process.env.COINBASE_CDP_API_KEY_NAME!;
@@ -44,7 +50,7 @@ const server = new Server(
 
 // Define Zod schemas for validation
 const BstsArgumentsSchema = z.object({
-    usdc_amount: z.number(),
+    usdc_amount: z.number().gt(0),
     recipient: z.string()
 });
 
@@ -54,13 +60,13 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
         tools: [
             {
                 name: "buy_something_to_somebody",
-                description: "Analyze the value of the purchased items and transfer USDC to the recipient via the Base chain",
+                description: "Analyze the value of the purchased items and transfer USDC to the recipient via the Base chain. Due to the uncertainty of blockchain transaction times, the transaction is only scheduled here and will not wait for the transaction to be completed.",
                 inputSchema: {
                     type: "object",
                     properties: {
                         usdc_amount: {
                             type: "number",
-                            description: "USDC amount",
+                            description: "USDC amount, greater than 0",
                         },
                         recipient: {
                             type: "string",
@@ -102,21 +108,22 @@ async function createMPCWallet() {
     let wallet = await Wallet.create({ networkId: "base-mainnet" });
     const seedFilePath = "mpc_info.json";
     wallet.saveSeedToFile(seedFilePath);
-    return await wallet.getDefaultAddress();
+    return (await wallet.getDefaultAddress()).getId();
 }
 
 async function sendUSDCUseMPCWallet(walletId: string, recipientAddr: string, amount: number) {
-    let wallet = await Wallet.fetch(walletId)
+    const wallet = await Wallet.fetch(walletId)
     await wallet.loadSeedFromFile('mpc_info.json')
-    let defaultAddress = await wallet.getDefaultAddress()
+    const defaultAddress = await wallet.getDefaultAddress()
 
-    const transfer = await defaultAddress.createTransfer({
+    await defaultAddress.createTransfer({
         amount: amount,
         assetId: Coinbase.assets.Usdc,
         destination: ethers.getAddress(recipientAddr),
         gasless: true
-    });
-    return (await transfer.wait()).getTransactionHash()
+    })
+
+    return defaultAddress.getId()
 }
 
 async function queryMpcWallet() {
@@ -124,14 +131,14 @@ async function queryMpcWallet() {
         const jsonString = await fs.readFile("mpc_info.json", 'utf8')
         const ids = Object.keys(JSON.parse(jsonString))
         if (!ids || ids.length === 0) {
-            return { mpcAddress: null, mpcId: null }
+            return { mpcAddress: "", mpcId: "" }
         }
         const wallet = await Wallet.fetch(ids[0])
         await wallet.loadSeedFromFile('mpc_info.json')
-        return { mpcAddress: await wallet.getDefaultAddress(), mpcId: ids[0] }
+        return { mpcAddress: (await wallet.getDefaultAddress()).getId(), mpcId: ids[0] }
     } catch (err) {
         console.error(`${err}`)
-        return { mpcAddress: null, mpcId: null }
+        return { mpcAddress: "", mpcId: "" }
     }
 }
 
@@ -177,13 +184,13 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
                     ]
                 }
             }
-            const tx = await sendUSDCUseMPCWallet(mpcId, recipientAddr, usdc_amount)
-            const linkTx = BASE_SCAN_TX + tx
+            const addr= await sendUSDCUseMPCWallet(mpcId, recipientAddr, usdc_amount)
+            const linkAddr = BASE_SCAN_ADDR + addr + "#tokentxns"
             return {
                 content: [
                     {
                         type: "text",
-                        text: `Transferred ${usdc_amount} USDC to ${recipientAddr} with zero fees, check this link: ${linkTx} for transaction details`,
+                        text: `The transaction (send ${usdc_amount} USDC to ${recipientAddr}) has been scheduled and you can view the details via link: ${linkAddr}`,
                     },
                 ],
             };

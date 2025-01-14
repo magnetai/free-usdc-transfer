@@ -102,7 +102,7 @@ async function createMPCWallet() {
     let wallet = await Wallet.create({ networkId: "base-mainnet" });
     const seedFilePath = "mpc_info.json";
     wallet.saveSeedToFile(seedFilePath);
-    return await wallet.getDefaultAddress();
+    return (await wallet.getDefaultAddress()).getId();
 }
 
 async function sendUSDCUseMPCWallet(walletId: string, recipientAddr: string, amount: number) {
@@ -128,7 +128,7 @@ async function queryMpcWallet() {
         }
         const wallet = await Wallet.fetch(ids[0])
         await wallet.loadSeedFromFile('mpc_info.json')
-        return { mpcAddress: await wallet.getDefaultAddress(), mpcId: ids[0] }
+        return { mpcAddress: (await wallet.getDefaultAddress()).getId(), mpcId: ids[0] }
     } catch (err) {
         console.error(`${err}`)
         return { mpcAddress: null, mpcId: null }

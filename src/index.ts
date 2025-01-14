@@ -12,6 +12,9 @@ import { createEnsPublicClient } from '@ensdomains/ensjs'
 import { Coinbase, Wallet } from "@coinbase/coinbase-sdk";
 import { ethers } from "ethers";
 
+// Base scan
+const BASE_SCAN_TX = "https://basescan.org/tx/"
+
 // Check for API key
 const COINBASE_CDP_API_KEY_NAME = process.env.COINBASE_CDP_API_KEY_NAME!;
 if (!COINBASE_CDP_API_KEY_NAME) {
@@ -102,15 +105,15 @@ async function createMPCWallet() {
     return await wallet.getDefaultAddress();
 }
 
-async function sendUSDCUseMPCWallet(walletId: string, targetAddress: string, sendValue: number) {
+async function sendUSDCUseMPCWallet(walletId: string, recipientAddr: string, amount: number) {
     let wallet = await Wallet.fetch(walletId)
     await wallet.loadSeedFromFile('mpc_info.json')
     let defaultAddress = await wallet.getDefaultAddress()
 
     const transfer = await defaultAddress.createTransfer({
-        amount: sendValue,
+        amount: amount,
         assetId: Coinbase.assets.Usdc,
-        destination: ethers.getAddress(targetAddress),
+        destination: ethers.getAddress(recipientAddr),
         gasless: true
     });
     return (await transfer.wait()).getTransactionHash()
@@ -119,18 +122,30 @@ async function sendUSDCUseMPCWallet(walletId: string, targetAddress: string, sen
 async function queryMpcWallet() {
     try {
         const jsonString = await fs.readFile("mpc_info.json", 'utf8')
-        console.log(jsonString)
         const ids = Object.keys(JSON.parse(jsonString))
-        //if (!ids || ids.length === 0) {
-        //    return { mpcAddress: null, mpcId: null }
-        //}
-        //console.log(ids[0])
-        //const wallet = await Wallet.fetch(ids[0])
-        //await wallet.loadSeedFromFile('mpc_info.json')
-        return { mpcAddress: ids[0], mpcId: null }
+        if (!ids || ids.length === 0) {
+            return { mpcAddress: null, mpcId: null }
+        }
+        const wallet = await Wallet.fetch(ids[0])
+        await wallet.loadSeedFromFile('mpc_info.json')
+        return { mpcAddress: await wallet.getDefaultAddress(), mpcId: ids[0] }
     } catch (err) {
         console.error(`${err}`)
         return { mpcAddress: null, mpcId: null }
+    }
+}
+
+async function queryMpcWalletId() {
+    try {
+        const jsonString = await fs.readFile("mpc_info.json", 'utf8')
+        const ids = Object.keys(JSON.parse(jsonString))
+        if (!ids || ids.length === 0) {
+            return ""
+        }
+        return ids[0]
+    } catch (err) {
+        console.error(`${err}`)
+        return ""
     }
 }
 
@@ -140,8 +155,8 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
     try {
         if (name === "buy_something_to_somebody") {
             const { usdc_amount, recipient } = BstsArgumentsSchema.parse(args);
-            const { mpcAddress } = await queryMpcWallet();
-            if (!mpcAddress) {
+            const mpcId= await queryMpcWalletId();
+            if (!mpcId) {
                 return {
                     content: [
                         {
@@ -162,11 +177,13 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
                     ]
                 }
             }
+            const tx = await sendUSDCUseMPCWallet(mpcId, recipientAddr, usdc_amount)
+            const linkTx = BASE_SCAN_TX + tx
             return {
                 content: [
                     {
                         type: "text",
-                        text: `Transferred ${usdc_amount} USDC to ${recipientAddr} with zero fees`,
+                        text: `Transferred ${usdc_amount} USDC to ${recipientAddr} with zero fees, check this link: ${linkTx} for transaction details`,
                     },
                 ],
             };

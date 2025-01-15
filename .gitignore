@@ -1,5 +1,5 @@
 node_modules/
-build/
+dist/
 *.log
 .env*
 PRIVATE_README.md

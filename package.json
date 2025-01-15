@@ -4,8 +4,7 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "build": "tsc && node -e \"require('fs').chmodSync('build/index.js', '755')\"",
-    "test": "node build/test.js"
+    "build": "tsc && node -e \"require('fs').chmodSync('build/index.js', '755')\""
   },
   "keywords": [],
   "author": "",
@@ -26,9 +25,9 @@
   },
   "type": "module",
   "bin": {
-    "free-usdc-transfer": "/build/index.js"
+    "free-usdc-transfer": "dist/index.js"
   },
   "files": [
-    "build"
+    "dist"
   ]
 }

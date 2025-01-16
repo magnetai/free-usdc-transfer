@@ -67,7 +67,7 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
     return {
         tools: [
             {
-                name: "buy_something_to_somebody",
+                name: "tranfer-usdc",
                 description: "Analyze the value of the purchased items and transfer USDC to the recipient via the Base chain. Due to the uncertainty of blockchain transaction times, the transaction is only scheduled here and will not wait for the transaction to be completed.",
                 inputSchema: {
                     type: "object",
@@ -85,8 +85,8 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
                 },
             },
             {
-                name: "create_mpc_wallet",
-                description: "Used to create your coinbase MPC wallet address. The newly created wallet cannot be used directly; the user must first deposit USDC. The transfer after creation requires user confirmation",
+                name: "create_coinbase_mpc_wallet",
+                description: "Used to create your Coinbase MPC wallet address. The newly created wallet cannot be used directly; the user must first deposit USDC. The transfer after creation requires user confirmation",
                 inputSchema: {
                     type: "object"
                 },
@@ -167,7 +167,7 @@ async function queryMpcWalletId() {
 server.setRequestHandler(CallToolRequestSchema, async (request) => {
     const { name, arguments: args } = request.params;
     try {
-        if (name === "buy_something_to_somebody") {
+        if (name === "tranfer-usdc") {
             const { usdc_amount, recipient } = BstsArgumentsSchema.parse(args);
             const mpcId= await queryMpcWalletId();
             if (!mpcId) {
@@ -197,11 +197,11 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
                 content: [
                     {
                         type: "text",
-                        text: `The transaction (send ${usdc_amount} USDC to ${recipientAddr}) has been scheduled and you can view the details via link: ${linkAddr}`,
+                        text: `The transaction (sending ${usdc_amount} USDC to ${recipientAddr}) has been scheduled on the Base chain. You can view the details via the link: ${linkAddr}`,
                     },
                 ],
             };
-        } else if (name === "create_mpc_wallet") {
+        } else if (name === "create_coinbase_mpc_wallet") {
             const { mpcAddress } = await queryMpcWallet();
             if (!mpcAddress) {
                 const newMpcAddress = await createMPCWallet()

@@ -37,8 +37,9 @@ if (!COINBASE_CDP_PRIVATE_KEY) {
 Coinbase.configure({ apiKeyName: COINBASE_CDP_API_KEY_NAME, privateKey: COINBASE_CDP_PRIVATE_KEY });
 
 // Store
-import * as path from 'path';
-const homeDir = require('os').homedir();
+import os from 'os';
+import path from 'path';
+const homeDir = os.homedir();
 const documentsDir = path.join(homeDir, 'Documents');
 const seedFilePath = path.join(documentsDir, "mpc_info.json");
 

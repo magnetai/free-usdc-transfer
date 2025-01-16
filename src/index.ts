@@ -36,12 +36,17 @@ if (!COINBASE_CDP_PRIVATE_KEY) {
 }
 Coinbase.configure({ apiKeyName: COINBASE_CDP_API_KEY_NAME, privateKey: COINBASE_CDP_PRIVATE_KEY });
 
+// Store
+import * as path from 'path';
+const homeDir = require('os').homedir();
+const documentsDir = path.join(homeDir, 'Documents');
+const seedFilePath = path.join(documentsDir, "mpc_info.json");
 
 // Create server instance
 const server = new Server(
     {
         name: "free-usdc-transfer",
-        version: "0.1.0",
+        version: "0.1.3",
     },
     {
         capabilities: {
@@ -108,14 +113,13 @@ async function getAddress(recipient: string) {
 
 async function createMPCWallet() {
     let wallet = await Wallet.create({ networkId: "base-mainnet" });
-    const seedFilePath = "mpc_info.json";
     wallet.saveSeedToFile(seedFilePath);
     return (await wallet.getDefaultAddress()).getId();
 }
 
 async function sendUSDCUseMPCWallet(walletId: string, recipientAddr: string, amount: number) {
     const wallet = await Wallet.fetch(walletId)
-    await wallet.loadSeedFromFile('mpc_info.json')
+    await wallet.loadSeedFromFile(seedFilePath)
     const defaultAddress = await wallet.getDefaultAddress()
 
     await defaultAddress.createTransfer({
@@ -130,13 +134,13 @@ async function sendUSDCUseMPCWallet(walletId: string, recipientAddr: string, amo
 
 async function queryMpcWallet() {
     try {
-        const jsonString = await fs.readFile("mpc_info.json", 'utf8')
+        const jsonString = await fs.readFile(seedFilePath, 'utf8')
         const ids = Object.keys(JSON.parse(jsonString))
         if (!ids || ids.length === 0) {
             return { mpcAddress: "", mpcId: "" }
         }
         const wallet = await Wallet.fetch(ids[0])
-        await wallet.loadSeedFromFile('mpc_info.json')
+        await wallet.loadSeedFromFile(seedFilePath)
         return { mpcAddress: (await wallet.getDefaultAddress()).getId(), mpcId: ids[0] }
     } catch (err) {
         console.error(`${err}`)
@@ -146,7 +150,7 @@ async function queryMpcWallet() {
 
 async function queryMpcWalletId() {
     try {
-        const jsonString = await fs.readFile("mpc_info.json", 'utf8')
+        const jsonString = await fs.readFile(seedFilePath, 'utf8')
         const ids = Object.keys(JSON.parse(jsonString))
         if (!ids || ids.length === 0) {
             return ""

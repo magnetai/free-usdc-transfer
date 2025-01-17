@@ -21,7 +21,7 @@ An MCP server implementation designed for free USDC transfers on the Base chain 
     - Provides a link to view transaction details on BaseScan.
 
 ### create_coinbase_mpc_wallet
-- Description: Create a Coinbase MPC wallet address. The newly created wallet cannot be used directly; the user must deposit USDC first. Transfers require user confirmation.
+- Description: Create a Coinbase MPC wallet address.
 - Behavior:
     - Creates a new Coinbase MPC wallet and saves the seed to a secure file.
     - If a wallet already exists, returns the existing wallet address.

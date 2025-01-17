@@ -1,16 +1,18 @@
 # Free USDC Transfer MCP Server
 
-An MCP server implementation designed for free USDC transfers on the Base chain and Coinbase MPC wallet management.
+An MCP server implementation enabling free USDC transfers on **[Base](https://base.org)** with **[Coinbase CDP](https://docs.cdp.coinbase.com/)** MPC Wallet integration.
+
+<img width="1374" alt="image" src="https://github.com/user-attachments/assets/3a58a720-8489-4f02-9075-19c8f264e3cc" />
 
 ## Features
 
-- USDC Transfers: Schedule USDC transfers to specified on-chain addresses or ENS domains via the Base chain.
-- Coinbase MPC Wallet Management: Create and manage Coinbase MPC wallets, enabling secure and fee-free transfers.
-- ENS Support: Automatically resolves ENS domains to on-chain addresses.
+- Free USDC Transfers: Send USDC to any address or ENS/BaseName domain on Base - no fees, just simple transfers
+- Coinbase MPC Wallet: Create and manage your Coinbase MPC wallet for secure, feeless transactions
+- Name Resolution: Automatic support for **ENS** and **BaseName** domains
 
-## Tools
+## Functions
 
-### tranfer-usdc
+### `tranfer-usdc`
 - Description: Analyze the value of the purchased items and transfer USDC to the recipient via the Base chain. Due to the uncertainty of blockchain transaction times, the transaction is only scheduled here and will not wait for the transaction to be completed.
 - Inputs:
     - usdc_amount (number): USDC amount, greater than 0.
@@ -20,7 +22,7 @@ An MCP server implementation designed for free USDC transfers on the Base chain 
     - Schedules a USDC transfer on the Base chain.
     - Provides a link to view transaction details on BaseScan.
 
-### create_coinbase_mpc_wallet
+### `create_coinbase_mpc_wallet`
 - Description: Create a Coinbase MPC wallet address.
 - Behavior:
     - Creates a new Coinbase MPC wallet and saves the seed to a secure file.
@@ -34,7 +36,8 @@ An MCP server implementation designed for free USDC transfers on the Base chain 
 2. Generate your API key from the developer dashboard
 
 ### Usage with Claude Desktop
-Add this to your `claude_desktop_config.json`:
+
+1. Add this to your `claude_desktop_config.json`:
 ```json
 {
   "mcpServers": {
@@ -53,6 +56,12 @@ Add this to your `claude_desktop_config.json`:
 }
 ```
 
+2. Or install the server with **[magnet-desktop](https://github.com/magnetai/magnet-desktop)**
+
 ## License
 
 This MCP server is licensed under the MIT License. This means you are free to use, modify, and distribute the software, subject to the terms and conditions of the MIT License. For more details, please see the LICENSE file in the project repository.
+
+---
+
+Crafted by [Magnet Labs](https://magnetlabs.xyz) with our vibrant AI & Crypto community

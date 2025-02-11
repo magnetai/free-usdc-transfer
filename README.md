@@ -1,4 +1,5 @@
 # Free USDC Transfer MCP Server
+[![smithery badge](https://smithery.ai/badge/@magnetai/mcp-free-usdc-transfer)](https://smithery.ai/server/@magnetai/mcp-free-usdc-transfer)
 
 An MCP server implementation enabling free USDC transfers on **[Base](https://base.org)** with **[Coinbase CDP](https://docs.cdp.coinbase.com/)** MPC Wallet integration.
 
@@ -35,7 +36,15 @@ An MCP server implementation enabling free USDC transfers on **[Base](https://ba
 1. Sign up for a [Coinbase CDP account](https://portal.cdp.coinbase.com/)
 2. Generate your API key from the developer dashboard
 
-### Usage with Claude Desktop
+### Usage with Claude or Magnet Desktop
+
+#### Installing via Smithery
+
+To install Free USDC Transfer for Claude Desktop automatically via [Smithery](https://smithery.ai/server/@magnetai/mcp-free-usdc-transfer):
+
+```bash
+npx -y @smithery/cli install @magnetai/mcp-free-usdc-transfer --client claude
+```
 
 1. Add this to your `claude_desktop_config.json`:
 ```json
